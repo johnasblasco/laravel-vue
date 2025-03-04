@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Hash;
+use Illuminate\Support\Facades\Hash as FacadesHash;
 
 class AuthController extends Controller
 
@@ -22,13 +24,37 @@ class AuthController extends Controller
             $field
         );
 
-        //  RETURN RESPONSE
-        return $response;
+        // HASH SANCTUM AFTER CREATING USER
+        $token = $response->createToken($request->name);
+
+
+        //  RETURN RESPONSE (PLAIN TEXT) 
+        return [
+            "user" => $response,
+            "token" => $token->plainTextToken
+        ];
     }
 
     public function login(Request $request)
     {
-        return "Login";
+        $request->validate([
+            'email' => 'required|email|exists:users',
+            'password' => 'required|',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+        if (!$user || !FacadesHash::check($request->password, $user->password)) {
+            return [
+                'message' => 'Invalid Credentials'
+            ];
+        }
+
+        $token = $user->createToken($user->name);
+
+        return [
+            "user" => $user,
+            "token" => $token->plainTextToken
+        ];
     }
 
     public function logout(Request $request)
